@@ -6,17 +6,23 @@ from functools import lru_cache
 from sklearn.feature_extraction.text import CountVectorizer
 
 # deploy locally uvicorn app:app --reload
-
+"""
+    API that takes as input one or more movie titles and uses a recommendation algorithm to return 10 similar movies.
+"""
 app = FastAPI()
 
+# Get and cache movies information
 movies_file_path = "files/df_clean.csv"
+
 
 @lru_cache()
 def get_movies_df(file_path):
     movies_df = pd.read_csv(file_path)
     return movies_df
 
+
 movies_df = get_movies_df(movies_file_path)
+
 
 class Movies(BaseModel):
     titles: str
@@ -44,6 +50,7 @@ def get_recommendations_list(movie_titles, similar_movies=10):
         movie_id = movies_df.index[movies_df["primaryTitle"] == movie_title]
         movie_id_list.append(movie_id[0])
 
+    # Calculate the similarities for each movie vector
     df_sim_list = pd.DataFrame()
     print(movie_id_list)
     for movie_id in movie_id_list:
@@ -53,8 +60,8 @@ def get_recommendations_list(movie_titles, similar_movies=10):
         df_sim = pd.DataFrame(sim_scores.reshape(-1), columns=[movie_id])
         df_sim_list[movie_id] = df_sim
 
+    # Calculate an average similarity vector
     df_sim_list["average"] = df_sim_list.mean(numeric_only=True, axis=1)
-
     rslt_df = df_sim_list.sort_values(by="average", ascending=False)
 
     rec_list = rslt_df.reset_index()
@@ -67,6 +74,7 @@ def get_recommendations_list(movie_titles, similar_movies=10):
     return movies_df[["primaryTitle", "genres"]].iloc[list1]
 
 
+# Function that vectorizes each movie information
 def get_vector_count_matrix():
     vector_count = CountVectorizer(stop_words="english")
     return vector_count.fit_transform(movies_df["soup"])
